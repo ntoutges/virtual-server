@@ -203,17 +203,19 @@ export class Client {
 
   private onVariableChange(
     name: string,
-    value: string
+    oldValue: string
   ) {
     const variable = this.globalVars.get(name);
     const body = {
       name,
-      value,
+      value: variable.get(),
       from: this.peer._id,
       time: (new Date()).getTime() // used to ensure everyone is working with the same data
     }
     this.send("var", body);
-    this.varListeners.forEach(callback => { callback(variable); });
+
+    // only send if value is different
+    if (variable.get() != oldValue) { this.varListeners.forEach(callback => { callback(variable); }); }
   }
 
   private send(type: string, body: any) {
@@ -321,10 +323,11 @@ export class Client {
           this.onVariableChange.bind(this, name)
         )
       );
-      this.onVariableChange(
-        name,
-        value
-      );
+      // don't trigger change on variable create
+      // this.onVariableChange(
+      //   name,
+      //   value
+      // );
     }
   }
 

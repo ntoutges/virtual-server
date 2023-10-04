@@ -96,6 +96,7 @@ if (location.search == "") {
     for (const value in vals) {
       $("#var-values").innerText += `${value}: ${vals[value].value}\n`;
     }
+    // console.log(variable.name)
   })
 
   $("#var-set").addEventListener("click", () => {
@@ -151,9 +152,9 @@ else {
 
   const offset = Math.floor(Math.random() * 100) / 100;
 
-  setInterval(() => {
-    client.getVariable("ms").set(Math.floor((new Date).getTime() / 100) * 100 + offset);
-  }, 100);
+  // setInterval(() => {
+  //   client.getVariable("ms").set(Math.floor((new Date).getTime() / 100) * 100 + offset);
+  // }, 100);
 
   // console.log(client.on("error", (err) => { console.log(err) }))
 }

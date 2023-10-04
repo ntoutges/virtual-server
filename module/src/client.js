@@ -145,16 +145,19 @@ export class Client {
             this.varListeners.forEach(callback => { callback(variable); });
         }
     }
-    onVariableChange(name, value) {
+    onVariableChange(name, oldValue) {
         const variable = this.globalVars.get(name);
         const body = {
             name,
-            value,
+            value: variable.get(),
             from: this.peer._id,
             time: (new Date()).getTime() // used to ensure everyone is working with the same data
         };
         this.send("var", body);
-        this.varListeners.forEach(callback => { callback(variable); });
+        // only send if value is different
+        if (variable.get() != oldValue) {
+            this.varListeners.forEach(callback => { callback(variable); });
+        }
     }
     send(type, body) {
         const id = this.getNextAvailableId();
@@ -243,7 +246,11 @@ export class Client {
         }
         else { // create new variable
             this.globalVars.set(name, new Variable(name, value, mode, this.peer._id, this.onVariableChange.bind(this, name)));
-            this.onVariableChange(name, value);
+            // don't trigger change on variable create
+            // this.onVariableChange(
+            //   name,
+            //   value
+            // );
         }
     }
     post(path, data) {

@@ -65,8 +65,9 @@ export class Variable {
 
   get() { return this.value; }
   private _set(value: any) {
+    const oldValue = this.value;
     this._setPrivateValue(value);
-    return this.onChange(value);
+    return this.onChange(oldValue);
   }
   set(
     value: any,

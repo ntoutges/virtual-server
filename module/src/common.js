@@ -19,8 +19,9 @@ export class Variable {
     }
     get() { return this.value; }
     _set(value) {
+        const oldValue = this.value;
         this._setPrivateValue(value);
-        return this.onChange(value);
+        return this.onChange(oldValue);
     }
     set(value, from = this.user, time = (new Date()).getTime(), triggerCallback = true) {
         if (this.lastUpdate < time // next update later

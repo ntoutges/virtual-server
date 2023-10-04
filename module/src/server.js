@@ -213,19 +213,27 @@ export class Server {
         }
         else { // create new variable
             this.globalVars.set(name, new Variable(name, value, mode, this.peer._id, this.onVariableChange.bind(this, mode, name)));
-            this.onVariableChange(mode, name, value);
+            // don't trigger change on variable create
+            // this.onVariableChange(
+            //   mode,
+            //   name,
+            //   value
+            // );
         }
     }
-    onVariableChange(mode, name, value) {
+    onVariableChange(mode, name, oldValue) {
         if (mode == "lazy")
             return; // don't bother updating a lazy variable
         const variable = this.globalVars.get(name);
         const body = {
             name,
-            value
+            value: variable.get()
         };
-        this.sendToAll("var", body);
-        this.varListeners.forEach(callback => { callback(variable); });
+        this.sendToAll("var", body); // update all, even if variable is unchanged, because client may have different value
+        // only send update to local listeners if there *is* a difference
+        if (variable.get() != oldValue) {
+            this.varListeners.forEach(callback => { callback(variable); });
+        }
     }
 }
 //# sourceMappingURL=server.js.map
