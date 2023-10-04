@@ -1,0 +1,142 @@
+body {
+  width: 100vw;
+  height: 100vh;
+  
+  padding: 0px;
+  margin: 0px;
+  background-color: cornsilk;
+}
+
+#data-test {
+  padding: 10px;
+  display: flex;
+}
+
+#send {
+  background-color: grey;
+}
+
+#recv {
+  background-color: lightgrey;
+}
+
+#send,
+#recv {
+  margin: 10px;
+  padding: 20px;
+  border-radius: 10px;
+}
+
+#send-submit {
+  user-select: none;
+}
+
+#recv:empty::after {
+  content: 'Nothing yet...'
+}
+
+#raw {
+  background-color: #93aaff;
+  padding: 15px;
+  margin: 10px;
+  margin-top: 0px;
+  border-radius: 10px;
+}
+
+#raw-title {
+  display: inline-block;
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%);
+
+  padding: 5px;
+  background-color: white;
+  margin-bottom: 5px;
+
+  border-radius: 5px;
+  user-select: none;
+}
+
+#raw-data {
+  background-color: white;
+  
+  border: solid black 1px;
+  padding: 10px;
+  overflow: auto;
+  /* display: inline-block; */
+
+  /* resize: vertical; */
+}
+
+#raw-data:empty::after {
+  content: 'Nothing yet...'
+}
+
+#raw-data > .json-raws:first-child {
+  display: inline-block;
+}
+
+.json-objects::before {
+  content: '{';
+}
+
+.json-objects::after {
+  content: '}';
+}
+
+.json-arrays::before {
+  content: '[';
+}
+
+.json-arrays::after {
+  content: ']';
+}
+
+.json-raws {
+  margin-left: 10px;
+  font-family: 'Courier New', Courier, monospace;
+  padding: 2px;
+}
+
+.json-key-value-pairs {
+  display: flex;
+}
+
+.json-arrays,
+.json-objects {
+  display: flex;
+  flex-direction: column;
+}
+
+.json-primitives:hover {
+  cursor: pointer;
+  background-color: rgb(65, 245, 65) !important;
+}
+
+#connections {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  background-color: orange;
+  padding: 10px;
+  border-radius: 10px;
+  font-family:'Courier New', Courier, monospace;
+}
+
+#disconnect {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  /* background-color: orange; */
+  padding: 10px;
+  border-radius: 10px;
+  font-family:'Courier New', Courier, monospace;
+}
+
+#disconnect:hover {
+  cursor: pointer;
+}
+
+#vars {
+  padding: 10px;
+}
