@@ -1,4 +1,4 @@
-import { Peer, Connection, pathPattern, subPathPattern, PromiseData, Message, Variable } from "./common.js"
+import { Peer, Connection, pathPattern, subPathPattern, PromiseData, Message, Variable, ActiveVariable, LazyVariable } from "./common.js"
 
 export interface ClientInterface {
   peerHost: string
@@ -34,7 +34,10 @@ export class Client {
   private readonly initListeners: Array<(id: string) => void> = [];
   private readonly varListeners: Array<(variable: Variable) => void> = [];
 
-  private readonly globalVars: Map<string, Variable> = new Map<string, Variable>(); // variables that persist across all clients and the server
+  private readonly globalVars = {
+    "active": new Map<string, ActiveVariable>(), // variables that persist across all clients and the server--immediately available to user and server
+    "lazy": new Map<string, LazyVariable>(), // variables that persist across all clients and the server--requestable by user
+  };
 
   private readonly password: string;
 

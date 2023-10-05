@@ -4,25 +4,24 @@ export const subPathPattern = /\/(.+)/;
 export class Variable {
     name;
     value;
-    mode;
-    onChange;
     user;
+    onChange;
+    // private updateValue: () => Promise<any>;
     // these values used for determining when variable should be updated
     lastUpdate = 0;
     lastUpdater = "";
-    constructor(name, value, mode, user, onChange) {
+    constructor(name, value, user, onChange) {
         this.name = name;
         this.value = value;
-        this.mode = mode;
         this.user = user;
         this.onChange = onChange;
     }
-    get() { return this.value; }
-    _set(value) {
-        const oldValue = this.value;
-        this._setPrivateValue(value);
-        return this.onChange(oldValue);
+}
+export class ActiveVariable extends Variable {
+    constructor(name, value, user, onChange) {
+        super(name, value, user, onChange);
     }
+    get() { return this.value; }
     set(value, from = this.user, time = (new Date()).getTime(), triggerCallback = true) {
         if (this.lastUpdate < time // next update later
             || (this.lastUpdate == time && this.lastUpdater < from) // updates sent at the same time, use updater as tie-breaker
@@ -37,7 +36,40 @@ export class Variable {
         }
         return false;
     }
-    // update value without sending onchange event
+    _set(value) {
+        this._setPrivateValue(value);
+        this.onChange(value);
+    }
+    _setPrivateValue(value) {
+        this.value = value;
+    }
+}
+export class LazyVariable extends Variable {
+    onGet;
+    constructor(name, value, user, onGet) {
+        super(name, value, user);
+        this.onGet = onGet;
+    }
+    get() { return this.onGet(); }
+    getLocal() { return this.value; }
+    set(value, from = this.user, time = (new Date()).getTime(), triggerCallback = true) {
+        if (this.lastUpdate < time // next update later
+            || (this.lastUpdate == time && this.lastUpdater < from) // updates sent at the same time, use updater as tie-breaker
+        ) {
+            this.lastUpdate = time;
+            this.lastUpdater = from;
+            if (triggerCallback)
+                this._set(value);
+            else
+                this._setPrivateValue(value);
+            return true;
+        }
+        return false;
+    }
+    _set(value) {
+        this._setPrivateValue(value);
+        this.onChange(value);
+    }
     _setPrivateValue(value) {
         this.value = value;
     }

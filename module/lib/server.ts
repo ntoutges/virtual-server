@@ -1,4 +1,4 @@
-import { Peer, Connection, pathPattern, subPathPattern, Message, Variable } from "./common.js"
+import { Peer, Connection, pathPattern, subPathPattern, Message, Variable, LazyVariable, ActiveVariable } from "./common.js"
 
 type ConnType = {
   hb: number
@@ -41,7 +41,21 @@ export class Server {
   readonly heartbeatPeriod: number;
   readonly password: string;
 
-  private readonly globalVars: Map<string, Variable> = new Map<string, Variable>(); // variables that persist across all clients and the server
+  // private readonly globalVars: Map<string, ActiveVariable> = new Map<string, ActiveVariable>(); // variables that persist across all clients and the server
+  // private readonly globalVarCategorization: {
+  //   "active": Set<string>,
+  //   "lazy": Set<string>,
+  //   "all": Map<string, "active" | "lazy"> // used for reverse search
+  // } = {
+  //   "active": new Set<string>(),
+  //   "lazy": new Set<string>(),
+  //   "all": new Map<string, "active" | "lazy">()
+  // };
+
+  private readonly globalVars = {
+    "active": new Map<string, ActiveVariable>(), // variables that persist across all clients and the server--immediately available to user and server
+    "lazy": new Map<string, LazyVariable>(), // variables that persist across all clients and the server--requestable by user
+  }
 
   constructor({
     peerHost,
@@ -158,13 +172,26 @@ export class Server {
           connRaw.close();
           this.closeConnection(connId);
           break;
-        case "var": // server acts as be all/end all for if variable is changed
-          this.getVariable(data.body.name).set(
-            data.body.value,
-            data.body.from,
-            data.body.time,
-            true
-          );
+        case "var": { // server acts as be all/end all for if variable is changed
+          const mode = data.body.mode as "active" | "lazy";
+          const action = data.body.action as "set" | "read";
+          
+          if (action == "set") {
+            ((mode == "active") ? this.getActiveVariable : this.getLazyVariable)(data.body.name).set(
+              data.body.value,
+              data.body.from,
+              data.body.time,
+              true
+            );
+          }
+          else { // action == "read"
+            this.sendTo(
+              connId,
+              "varval",
+              ((mode == "active") ? this.getActiveVariable : this.getLazyVariable)(data.body.name).get()
+            );
+          }
+        }
           break;
       }
       // set heartbeat
@@ -174,8 +201,7 @@ export class Server {
 
   getActiveVarData() {
     const data = {};
-    for (const [name, value] of this.globalVars.entries()) {
-      if (value.mode == "lazy") { continue; } // ignore all lazy variables
+    for (const [name,value] of this.globalVars.active.entries()) { // loop through actives
       data[name] = {
         value: value.get()
       };
@@ -185,8 +211,7 @@ export class Server {
 
   getLazyVarData() {
     const arr = [];
-    for (const [name,value] of this.globalVars.entries()) {
-      if (value.mode == "active") { continue; } // ignore all active variables
+    for (const [name,value] of this.globalVars.active.entries()) { // loop through lazies
       arr.push(name);
     }
     return arr;
@@ -264,42 +289,58 @@ export class Server {
     this.sendToAll("disconnect", true);
   }
 
-  getVariable(name: string) {
-    if (!this.globalVars.has(name)) { // if variable doesn't already exist: make that variable
-      this.createVariable(name, null); // undefined is the default value for uninitialized variables
+  getActiveVariable(name: string): ActiveVariable {
+    if (!this.globalVars.active.has(name)) { // if variable doesn't already exist: make that variable
+      this.createActiveVariable(name, null); // undefined is the default value for uninitialized variables
     }
-    return this.globalVars.get(name);
+    return this.globalVars.active.get(name);
   }
 
-  createVariable(
+  getLazyVariable(name: string): LazyVariable {
+    if (!this.globalVars.lazy.has(name)) { // if variable doesn't already exist: make that variable
+      this.createLazyVariable(name, null); // undefined is the default value for uninitialized variables
+    }
+    return this.globalVars.lazy.get(name);
+  }
+
+  createActiveVariable(
     name: string,
-    value: any,
-    mode: "active" | "lazy" = "active"
+    value: any
   ) {
-    if (this.globalVars.has(name)) {
-      this.globalVars.get(name).set( // change value of existing variable
-        value,
-        ""
-      );
+    if (this.globalVars.active.has(name)) {
+      this.globalVars.active.get(name).set(value);
     }
     else { // create new variable
-      this.globalVars.set(
+      this.globalVars.active.set(
         name,
-        new Variable(
+        new ActiveVariable(
           name,
           value,
-          mode,
           this.peer._id,
-          this.onVariableChange.bind(this, mode, name)
+          this.onVariableChange.bind(this, "active", name)
         )
       );
+    }
+  }
 
-      // don't trigger change on variable create
-      // this.onVariableChange(
-      //   mode,
-      //   name,
-      //   value
-      // );
+  createLazyVariable(
+    name: string,
+    value: any
+  ) {
+    if (this.globalVars.lazy.has(name)) {
+      this.globalVars.lazy.get(name).set(value);
+    }
+    else { // create new variable
+      this.globalVars.lazy.set(
+        name,
+        new LazyVariable(
+          name,
+          value,
+          this.peer._id,
+          this.onVariableChange.bind(this, "lazy", name),
+          this.onLazyVariableGet.bind(this, name)
+        )
+      );
     }
   }
 
@@ -310,7 +351,7 @@ export class Server {
   ) {
     if (mode == "lazy") return; // don't bother updating a lazy variable
     
-    const variable = this.globalVars.get(name);
+    const variable = this.globalVars.active.get(name);
     const body = {
       name,
       value: variable.get()
@@ -321,5 +362,12 @@ export class Server {
     if (variable.get() != oldValue) {
       this.varListeners.forEach(callback => { callback(variable); });
     }
+  }
+
+  // server is the authority on lazy variable values, therefore it can just return itself
+  private onLazyVariableGet(name: string): Promise<any> {
+    return new Promise(resolve => {
+      resolve(this.globalVars.lazy.get(name).getLocal());
+    });
   }
 }

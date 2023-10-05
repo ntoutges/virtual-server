@@ -19,7 +19,10 @@ export class Client {
     disconnectListeners = [];
     initListeners = [];
     varListeners = [];
-    globalVars = new Map(); // variables that persist across all clients and the server
+    globalVars = {
+        "active": new Map(),
+        "lazy": new Map(), // variables that persist across all clients and the server--requestable by user
+    };
     password;
     disconnectReason = "";
     constructor({ peerHost, peerId, password = "", connectTimeout = 1000, heartbeatPeriod = 1000 }) {
