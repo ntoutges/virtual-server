@@ -103,8 +103,9 @@ export class ActiveVariable extends Variable {
   }
 
   private _set(value: any) {
+    const oldValue = this.value;
     this._setPrivateValue(value);
-    this.onChange(value);
+    this.onChange(oldValue);
   }
 
   private _setPrivateValue(value: any) {
@@ -119,9 +120,10 @@ export class LazyVariable extends Variable {
     name: string,
     value: string,
     user: string,
+    onChange: (newVal: any) => Promise<boolean>,
     onGet: () => Promise<any>
   ) {
-    super(name,value,user,);
+    super(name,value,user,onChange);
     this.onGet = onGet;
   }
 
@@ -149,8 +151,9 @@ export class LazyVariable extends Variable {
   }
 
   private _set(value: any) {
+    const oldValue = this.value;
     this._setPrivateValue(value);
-    this.onChange(value);
+    this.onChange(oldValue);
   }
 
   private _setPrivateValue(value: any) {

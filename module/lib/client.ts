@@ -166,7 +166,7 @@ export class Client {
             this.send("disconnect", true);
             break;
           case "var": {
-            const variable = this.getVariable(data.body.name);
+            const variable = this.getActiveVariable(data.body.name); // this type of message only interacts with active vars
             
             // only send update if change
             if (variable.get() != data.body.value) {
@@ -187,16 +187,33 @@ export class Client {
 
   private doInit(response: Message) {
     const activeVars = response.body.vars.active;
+    const lazyVars = response.body.vars.lazy;
+    
     for (const name in activeVars) {
-      const variable = new Variable(
+      const variable = new ActiveVariable(
         name,
         activeVars[name].value,
-        "active",
         this.peer._id,
-        this.onVariableChange.bind(this, name)
+        this.onVariableChange.bind(this, "active", name)
       );
       
-      this.globalVars.set(
+      this.globalVars.active.set(
+        name,
+        variable
+      );
+      this.varListeners.forEach(callback => { callback(variable); });
+    }
+
+    for (const name of lazyVars) {
+      const variable = new LazyVariable(
+        name,
+        null,
+        this.peer._id,
+        this.onVariableChange.bind(this, "lazy", name),
+        this.onLazyVariableGet.bind(this, name)
+      );
+      
+      this.globalVars.lazy.set(
         name,
         variable
       );
@@ -205,20 +222,38 @@ export class Client {
   }
 
   private onVariableChange(
+    mode: "active" | "lazy",
     name: string,
     oldValue: string
   ) {
-    const variable = this.globalVars.get(name);
+    const variable = this.globalVars[mode].get(name);
+    const value = (mode == "active") ? variable.get() : (variable as LazyVariable).getLocal();
     const body = {
       name,
-      value: variable.get(),
+      mode,
+      action: "set",
+      value,
       from: this.peer._id,
       time: (new Date()).getTime() // used to ensure everyone is working with the same data
     }
     this.send("var", body);
 
     // only send if value is different
-    if (variable.get() != oldValue) { this.varListeners.forEach(callback => { callback(variable); }); }
+    if (value != oldValue) { this.varListeners.forEach(callback => { callback(variable); }); }
+  }
+
+  private onLazyVariableGet(name: string): Promise<any> {
+    const body = {
+      name,
+      mode: "lazy",
+      action: "get"
+    };
+
+    return new Promise<any>((resolve) => {
+      this.send("var", body).then((data) => {
+        resolve(data.body);
+      });
+    });
   }
 
   private send(type: string, body: any) {
@@ -279,8 +314,7 @@ export class Client {
 
   getActiveVarData() {
     const data = {};
-    for (const [name, value] of this.globalVars.entries()) {
-      if (value.mode == "lazy") { continue; } // ignore all lazy variables
+    for (const [name,value] of this.globalVars.active.entries()) { // loop through actives
       data[name] = {
         value: value.get()
       };
@@ -290,47 +324,64 @@ export class Client {
 
   getLazyVarData() {
     const arr = [];
-    for (const [name,value] of this.globalVars.entries()) {
-      if (value.mode == "active") { continue; } // ignore all active variables
+    for (const [name,value] of this.globalVars.active.entries()) { // loop through lazies
       arr.push(name);
     }
     return arr;
   }
 
-  getVariable(name: string) {
-    if (!this.globalVars.has(name)) { // if variable doesn't already exist: make that variable
-      this.createVariable(name, null); // undefined is the default value for uninitialized variables
+  getActiveVariable(name: string): ActiveVariable {
+    if (!this.globalVars.active.has(name)) { // if variable doesn't already exist: make that variable
+      this.createActiveVariable(name, null); // undefined is the default value for uninitialized variables
     }
-    return this.globalVars.get(name);
+    return this.globalVars.active.get(name);
   }
 
-  createVariable(
+  getLazyVariable(name: string): LazyVariable {
+    if (!this.globalVars.lazy.has(name)) { // if variable doesn't already exist: make that variable
+      this.createLazyVariable(name, null); // undefined is the default value for uninitialized variables
+    }
+    return this.globalVars.lazy.get(name);
+  }
+
+  createActiveVariable(
     name: string,
-    value: any,
-    mode: "active" | "lazy" = "active"
+    value: any
   ) {
-    if (this.globalVars.has(name)) {
-      this.globalVars.get(name).set( // change value of existing variable
-        value,
-        ""
-      );
+    if (this.globalVars.active.has(name)) {
+      this.globalVars.active.get(name).set(value);
     }
     else { // create new variable
-      this.globalVars.set(
+      this.globalVars.active.set(
         name,
-        new Variable(
+        new ActiveVariable(
           name,
           value,
-          mode,
           this.peer._id,
-          this.onVariableChange.bind(this, name)
+          this.onVariableChange.bind(this, "active", name)
         )
       );
-      // don't trigger change on variable create
-      // this.onVariableChange(
-      //   name,
-      //   value
-      // );
+    }
+  }
+
+  createLazyVariable(
+    name: string,
+    value: any
+  ) {
+    if (this.globalVars.lazy.has(name)) {
+      this.globalVars.lazy.get(name).set(value);
+    }
+    else { // create new variable
+      this.globalVars.lazy.set(
+        name,
+        new LazyVariable(
+          name,
+          value,
+          this.peer._id,
+          this.onVariableChange.bind(this, "lazy", name),
+          this.onLazyVariableGet.bind(this, name)
+        )
+      );
     }
   }
 

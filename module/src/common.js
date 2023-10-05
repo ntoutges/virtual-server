@@ -37,8 +37,9 @@ export class ActiveVariable extends Variable {
         return false;
     }
     _set(value) {
+        const oldValue = this.value;
         this._setPrivateValue(value);
-        this.onChange(value);
+        this.onChange(oldValue);
     }
     _setPrivateValue(value) {
         this.value = value;
@@ -46,8 +47,8 @@ export class ActiveVariable extends Variable {
 }
 export class LazyVariable extends Variable {
     onGet;
-    constructor(name, value, user, onGet) {
-        super(name, value, user);
+    constructor(name, value, user, onChange, onGet) {
+        super(name, value, user, onChange);
         this.onGet = onGet;
     }
     get() { return this.onGet(); }
@@ -67,8 +68,9 @@ export class LazyVariable extends Variable {
         return false;
     }
     _set(value) {
+        const oldValue = this.value;
         this._setPrivateValue(value);
-        this.onChange(value);
+        this.onChange(oldValue);
     }
     _setPrivateValue(value) {
         this.value = value;

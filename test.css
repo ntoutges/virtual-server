@@ -137,6 +137,7 @@ body {
   cursor: pointer;
 }
 
-#vars {
+#vars,
+#lazyvars {
   padding: 10px;
 }

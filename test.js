@@ -102,10 +102,25 @@ if (location.search == "") {
   $("#var-set").addEventListener("click", () => {
     const name = $("#var-name").value;
     const value = $("#var-value").value;
-    server.getVariable(name).set(value);
+    server.getActiveVariable(name).set(value);
   });
 
-  server.getVariable("test");
+  $("#lazy-var-set").addEventListener("click", () => {
+    const name = $("#lazy-var-name").value;
+    const val = $("#lazy-var-value").value;
+
+    server.getLazyVariable(name).set(val);
+  })
+
+  $("#lazy-var-get").addEventListener("click", () => {
+    const name = $("#lazy-var-name").value;
+    
+    server.getLazyVariable(name).get().then(val => {
+      $("#lazy-var-value").value = val;
+    });
+  })
+
+  server.getActiveVariable("test");
 }
 else {
   const client = new Client ({
@@ -147,14 +162,21 @@ else {
   $("#var-set").addEventListener("click", () => {
     const name = $("#var-name").value;
     const value = $("#var-value").value;
-    client.getVariable(name).set(value);
+    client.getActiveVariable(name).set(value);
   });
 
-  const offset = Math.floor(Math.random() * 100) / 100;
+  $("#lazy-var-set").addEventListener("click", () => {
+    const name = $("#lazy-var-name").value;
+    const val = $("#lazy-var-value").value;
 
-  // setInterval(() => {
-  //   client.getVariable("ms").set(Math.floor((new Date).getTime() / 100) * 100 + offset);
-  // }, 100);
+    client.getLazyVariable(name).set(val);
+  })
 
-  // console.log(client.on("error", (err) => { console.log(err) }))
+  $("#lazy-var-get").addEventListener("click", () => {
+    const name = $("#lazy-var-name").value;
+    
+    client.getLazyVariable(name).get().then(val => {
+      $("#lazy-var-value").value = val;
+    });
+  })
 }

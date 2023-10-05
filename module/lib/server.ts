@@ -177,22 +177,29 @@ export class Server {
           const action = data.body.action as "set" | "read";
           
           if (action == "set") {
-            ((mode == "active") ? this.getActiveVariable : this.getLazyVariable)(data.body.name).set(
+            ((mode == "active") ? this.getActiveVariable(data.body.name) : this.getLazyVariable(data.body.name)).set(
               data.body.value,
               data.body.from,
               data.body.time,
               true
             );
+            this.respondTo(connId, data.metadata.id, 200, true);
           }
           else { // action == "read"
-            this.sendTo(
-              connId,
-              "varval",
-              ((mode == "active") ? this.getActiveVariable : this.getLazyVariable)(data.body.name).get()
-            );
+            if (mode == "active") {
+              this.respondTo(
+                connId, data.metadata.id, 200,
+                this.getActiveVariable(data.body.name).get()
+              );
+            }
+            else {
+              this.getLazyVariable(data.body.name).get().then(value => {
+                this.respondTo(connId, data.metadata.id, 200, value);
+              });
+            }
           }
         }
-          break;
+        break;
       }
       // set heartbeat
       conn.hb = (new Date()).getTime();
@@ -350,7 +357,7 @@ export class Server {
     oldValue: string
   ) {
     if (mode == "lazy") return; // don't bother updating a lazy variable
-    
+
     const variable = this.globalVars.active.get(name);
     const body = {
       name,
