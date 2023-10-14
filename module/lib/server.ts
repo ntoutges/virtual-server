@@ -224,6 +224,14 @@ export class Server {
     return arr;
   }
 
+  sendSocket(connId: string, body: any) {
+    this.sendTo(
+      connId,
+      "socket",
+      body
+    );
+  }
+
   private sendToAll(type: string, body: any) {
     for (const id of this.conns.keys()) { this.sendTo(id, type, body); }
   }
@@ -289,7 +297,7 @@ export class Server {
   // return type: will (eventually) do response -- if false: auto-response will be triggered
   post(channel: string, callback: (req: Request, res: Response) => boolean) {
     this.postListeners.set(channel, callback);
-  }
+  }  
 
   // peers will receive this, then send their own disconnect messages--allowing the server to then close the connection
   disconnect() {

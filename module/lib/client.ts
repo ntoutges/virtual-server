@@ -33,6 +33,7 @@ export class Client {
   private readonly disconnectListeners: Array<(id: string) => void> = [];
   private readonly initListeners: Array<(id: string) => void> = [];
   private readonly varListeners: Array<(variable: Variable) => void> = [];
+  private readonly socketListeners: Array<(message: string) => void> = [];
 
   private readonly globalVars = {
     "active": new Map<string, ActiveVariable>(), // variables that persist across all clients and the server--immediately available to user and server
@@ -180,6 +181,9 @@ export class Client {
             }
             break;
           }
+          case "socket": // a message sent from the server to the client, without expecting a response
+            this.socketListeners.forEach(callback => { callback(data.body); });
+            break;
         }
       });
     });
@@ -398,7 +402,7 @@ export class Client {
   }
 
   on(
-    eventType: "connect" | "reconnect" | "disconnect" | "error" | "post" | "init" | "variable",
+    eventType: "connect" | "reconnect" | "disconnect" | "error" | "init" | "variable" | "socket",
     callback: (data: any) => void
   ) {
     switch (eventType) {
@@ -421,6 +425,9 @@ export class Client {
         break;
       case "variable":
         this.varListeners.push(callback);
+        break;
+      case "socket":
+        this.socketListeners.push(callback);
         break;
     }
   }
