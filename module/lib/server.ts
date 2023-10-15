@@ -9,7 +9,8 @@ type ConnType = {
 export type Request = {
   path: string
   body: any
-  message: Message
+  message: Message,
+  from: string
 }
 export type Response = {
   send: (data: any) => void;
@@ -150,7 +151,8 @@ export class Server {
             const req: Request = {
               path: subPath,
               body: data.body,
-              message: data
+              message: data,
+              from: connId
             };
             const res: Response = {
               send: this.respondTo.bind(this, connId, data.metadata.id, 200),
