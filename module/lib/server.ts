@@ -329,7 +329,11 @@ export class Server {
   // return type: will (eventually) do response -- if false: auto-response will be triggered
   post(channel: string, callback: (req: Request, res: Response) => boolean) {
     this.postListeners.set(channel, callback);
-  }  
+  }
+
+  unpost(channel: string) {
+    this.postListeners.delete(channel);
+  }
 
   // peers will receive this, then send their own disconnect messages--allowing the server to then close the connection
   disconnect() {
