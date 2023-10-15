@@ -118,8 +118,17 @@ export class Client {
       this.disconnectListeners.forEach(callback => { callback(this.conn.peer); });
       return;
     }
+    
+    // unable to establish connection
+    const connFail = setTimeout(() => {
+      this.isConnectionDead = true;
+      this.disconnectReason = "Unable to establish connection. Try disabling \"Anonymize local IPs exposed by WebRTC.\"";
+      this.disconnectListeners.forEach(callback => { callback(this.conn.peer); });
+    }, 5000);
+    
 
     this.conn.on("open", () => {
+      clearTimeout(connFail);
       if (this.isConnectionDead) { // connection is dead, get rid of connection
         this.conn.close();
       }
