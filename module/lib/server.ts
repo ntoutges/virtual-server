@@ -36,6 +36,7 @@ export class Server {
   private readonly connectListeners: Array<(id: string) => void> = [];
   private readonly disconnectListeners: Array<(id: string) => void> = [];
   private readonly initListeners: Array<(id: string) => void> = [];
+  private readonly errListeners: Array<(err:any) => void> = [];
   private readonly varListeners: Array<(variable: Variable) => void> = [];
   
   readonly heartbeatPeriod: number;
@@ -100,6 +101,8 @@ export class Server {
       );
       this.initializeConnection(conn.peer);
     });
+
+    this.peer.on("error", (err: any) => { this.errListeners.forEach(callback => { callback(err); }) });
 
     setInterval(this.trimHeartless.bind(this), heartbeatPeriod * 2);
   }
@@ -283,7 +286,7 @@ export class Server {
         break;
       // triggered when this peer experiences an error
       case "error":
-        this.peer.on("error", callback);
+        this.errListeners.push(callback);
         break;
       case "init":
         this.initListeners.push(callback);
@@ -291,6 +294,35 @@ export class Server {
       case "variable":
         this.varListeners.push(callback);
         break;
+    }
+  }
+  off(
+    eventType: "connect" | "disconnect" | "error" | "post" | "init" | "variable",
+    callback: (data: any) => void
+  ) {
+    let arr: Array<(data: any) => void> = [];
+    switch (eventType) {
+      case "connect":
+        arr = this.connectListeners;
+        break;
+      case "disconnect":
+        arr = this.disconnectListeners;
+        break;
+      case "error":
+        arr = this.errListeners;
+        break;
+      case "init":
+        arr = this.initListeners;
+        break;
+      case "variable":
+        arr = this.varListeners;
+        break;
+    }
+    for (let i in arr) {
+      if (arr[i] == callback) {
+        arr.splice(+i,1);
+        break;
+      }
     }
   }
   

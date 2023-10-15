@@ -32,6 +32,7 @@ export class Client {
   private readonly reconnectListeners: Array<(id: string) => void> = [];
   private readonly disconnectListeners: Array<(id: string) => void> = [];
   private readonly initListeners: Array<(id: string) => void> = [];
+  private readonly errListeners: Array<(err:any) => void> = [];
   private readonly varListeners: Array<(variable: Variable) => void> = [];
   private readonly socketListeners: Array<(message: string) => void> = [];
 
@@ -90,6 +91,8 @@ export class Client {
         this.timeoutTimeout(connectTimeout);
       });
     });
+
+    this.peer.on("error", (err: any) => { this.errListeners.forEach(callback => { callback(err); }) });
   }
 
   private timeoutTimeout(timeout: number) {
@@ -418,7 +421,7 @@ export class Client {
         break;
       // triggered when this peer experiences an error
       case "error":
-        this.peer.on("error", callback);
+        this.errListeners.push(callback);
         break;
       case "init":
         this.initListeners.push(callback);
@@ -429,6 +432,42 @@ export class Client {
       case "socket":
         this.socketListeners.push(callback);
         break;
+    }
+  }
+
+  off(
+    eventType: "connect" | "reconnect" | "disconnect" | "error" | "init" | "variable" | "socket",
+    callback: (data: any) => void
+  ) {
+    let arr: Array<(data: any) => void> = [];
+    switch (eventType) {
+      case "connect":
+        arr = this.connectListeners;
+        break;
+      case "reconnect":
+        arr = this.reconnectListeners;
+        break;
+      case "disconnect":
+        arr = this.disconnectListeners;
+        break;
+      case "error":
+        arr = this.errListeners;
+        break;
+      case "init":
+        arr = this.initListeners;
+        break;
+      case "variable":
+        arr = this.varListeners;
+        break;
+      case "socket":
+        arr = this.socketListeners;
+        break;
+    }
+    for (let i in arr) {
+      if (arr[i] == callback) {
+        arr.splice(+i,1);
+        break;
+      }
     }
   }
 }
