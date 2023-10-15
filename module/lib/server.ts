@@ -227,12 +227,21 @@ export class Server {
     return arr;
   }
 
+  // connId of "*" sends to all (broadcast, effectively)
   sendSocket(connId: string, body: any) {
-    this.sendTo(
-      connId,
-      "socket",
-      body
-    );
+    if (connId == "*") {
+      this.sendToAll(
+        "socket",
+        body
+      );
+    }
+    else {
+      this.sendTo(
+        connId,
+        "socket",
+        body
+      );
+    }
   }
 
   private sendToAll(type: string, body: any) {
